@@ -1,0 +1,78 @@
+#!/bin/bash
+
+# Periksa jumlah argumen
+if [ "$#" -ne 1 ]; then
+  echo "Usage: ./$0 <path_to_folder>"
+  exit 1
+fi
+
+# Simpan path folder dari argumen
+folder_path="$1"
+
+# Periksa apakah folder ada
+if [ ! -d "$folder_path" ]; then
+  echo "Folder not found: $folder_path"
+  echo "Usage: ./script <path_to_folder>"
+  exit 1
+fi
+
+# Nama file output
+output_file="output.txt"
+output_path="/root/text-mining/$output_file"
+
+# Membuat folder output jika belum ada
+mkdir -p "$(dirname "$output_path")"
+
+# Warna ANSI
+RED=$(tput setaf 1)     # Merah
+GREEN=$(tput setaf 2)   # Hijau
+NC=$(tput sgr0)         # Reset warna
+
+# Navigasi ke folder
+cd "$folder_path"
+
+# Inisialisasi associative array untuk menyimpan kata
+declare -A word_count
+
+# Loop melalui setiap folder
+for folder in */; do
+  echo -e "${RED}Folder: $folder${NC}"
+
+  # Navigasi ke folder
+  cd "$folder"
+
+  # Loop melalui setiap file di dalam folder
+  for file in *; do
+    #echo -e "  ${GREEN}File: $file${NC}"
+
+    # Memproses hanya jika file adalah file teks
+    if [ -f "$file" ]; then
+      # Memproses file
+      echo "  ${GREEN}Memproses file: $file${NC}"
+      stopwords="/root/text-mining/stop_words.txt"
+      # Menghapus kata-kata yang ada di stopwords dari teks
+      filtered_words=$(tr -sc 'A-Za-z' '\n' < "$file" | tr '[:upper:]' '[:lower:]' | grep -v -w -f "$stopwords")
+
+      # Menghitung frekuensi kata
+      while read -r word; do
+        # Menghitung frekuensi kata
+        if [ -n "${word_count["$word"]}" ]; then
+          word_count["$word"]=$(( ${word_count["$word"]} + 1 ))
+        else
+          word_count["$word"]=1
+        fi
+      done <<< "$filtered_words"
+    fi
+  done
+
+  # Kembali ke direktori awal
+  cd ..
+done
+
+# Simpan hasil ke dalam file output
+echo "Menyimpan hasil di: $output_path"
+{
+  for word in "${!word_count[@]}"; do
+    echo "${word_count["$word"]} $word"
+  done
+} | sort -nr > "$output_path"
