@@ -2,14 +2,14 @@
 
 # Periksa jumlah argumen
 if [ "$#" -ne 1 ]; then
-  echo "Usage: ./$0 <path_to_folder>"
-  exit 1
+  echo "Usage: ./$0 <path_to_folder>"                        
+exit 1
 fi
 
 # Simpan path folder dari argumen
 folder_path="$1"
 
-# Periksa apakah folder ada
+# Periksa apakah folder ada                                
 if [ ! -d "$folder_path" ]; then
   echo "Folder not found: $folder_path"
   echo "Usage: ./script <path_to_folder>"
@@ -18,7 +18,7 @@ fi
 
 # Nama file output
 output_file="output.txt"
-output_path="/root/text-mining/$output_file"
+output_path="/root/TextHarvestExplorer/$output_file"
 
 # Membuat folder output jika belum ada
 mkdir -p "$(dirname "$output_path")"
@@ -26,6 +26,7 @@ mkdir -p "$(dirname "$output_path")"
 # Warna ANSI
 RED=$(tput setaf 1)     # Merah
 GREEN=$(tput setaf 2)   # Hijau
+BLUE=$(tput setaf 4)    # Biru
 NC=$(tput sgr0)         # Reset warna
 
 # Navigasi ke folder
@@ -33,6 +34,10 @@ cd "$folder_path"
 
 # Inisialisasi associative array untuk menyimpan kata
 declare -A word_count
+
+# Menghitung jumlah file
+total_files=$(find . -type f | wc -l)
+processed_files=0
 
 # Loop melalui setiap folder
 for folder in */; do
@@ -43,13 +48,14 @@ for folder in */; do
 
   # Loop melalui setiap file di dalam folder
   for file in *; do
-    #echo -e "  ${GREEN}File: $file${NC}"
-
     # Memproses hanya jika file adalah file teks
     if [ -f "$file" ]; then
+      # Menampilkan indikator loading
+      processed_files=$((processed_files + 1))
+      echo -ne "  ${BLUE}Processing file: $file (${processed_files}/${total_files})${NC}\r"
+
       # Memproses file
-      echo "  ${GREEN}Memproses file: $file${NC}"
-      stopwords="/root/text-mining/stop_words.txt"
+      stopwords="/root/TextHarvestExplorer/stop_words.txt"
       # Menghapus kata-kata yang ada di stopwords dari teks
       filtered_words=$(tr -sc 'A-Za-z' '\n' < "$file" | tr '[:upper:]' '[:lower:]' | grep -v -w -f "$stopwords")
 
@@ -69,6 +75,10 @@ for folder in */; do
   cd ..
 done
 
+# Tampilkan pesan bahwa proses selesai
+echo -ne "${BLUE}Processing completed.${NC}"
+echo
+
 # Simpan hasil ke dalam file output
 echo "Menyimpan hasil di: $output_path"
 {
@@ -76,3 +86,5 @@ echo "Menyimpan hasil di: $output_path"
     echo "${word_count["$word"]} $word"
   done
 } | sort -nr > "$output_path"
+
+echo "Hasil disimpan di: $output_path
